@@ -65,7 +65,7 @@ func initUser(db *gorm.DB) *UserHandler {
 }
 func initDB() *gorm.DB {
 	//初始化配置信息
-	db, err := gorm.Open(mysql.Open("root:Fjy20040816@tcp(124.220.212.210:3306)/gorm"))
+	db, err := gorm.Open(mysql.Open("root:root@tcp(localhost:3306)/gorm"))
 	if err != nil {
 		panic(err)
 	}
