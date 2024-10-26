@@ -1,7 +1,6 @@
 package web
 
 import (
-	"fmt"
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -55,6 +54,7 @@ func (u *UserHandler) Login(c *gin.Context) {
 	}
 	var req LoginReq
 	if err := c.ShouldBind(&req); err != nil {
+		//c.String(200, err.Error())
 		return
 	}
 	user, err := u.svc.Login(c, domain.User{
@@ -69,10 +69,10 @@ func (u *UserHandler) Login(c *gin.Context) {
 		c.String(200, "系统错误")
 		return
 	}
+	//设置cookie
 	sess := sessions.Default(c)
 	sess.Set("userId", user.Id)
 	if err := sess.Save(); err != nil {
-		fmt.Println(err.Error())
 		return
 	}
 	c.String(200, "登录成功")
@@ -132,7 +132,27 @@ func (u *UserHandler) SignUp(c *gin.Context) {
 
 }
 
-func (u *UserHandler) Edit(c *gin.Context) {}
+func (u *UserHandler) Edit(c *gin.Context) {
+	type EditReq struct {
+		Email       string `json:"email"`
+		OldPassword string `json:"oldPassword"`
+		NewPassword string `json:"newPassword"`
+	}
+	var req EditReq
+	if err := c.ShouldBind(&req); err != nil {
+		return
+	}
+	err := u.svc.Edit(c, req.Email, req.OldPassword, req.NewPassword)
+	if err == service.ErrInvalidPassword {
+		c.String(200, "密码错误")
+		return
+	}
+	if err != nil {
+		c.String(200, err.Error())
+		return
+	}
+	c.String(200, "修改成功")
+}
 func (u *UserHandler) Profile(c *gin.Context) {
 	c.String(200, "登录成功")
 }

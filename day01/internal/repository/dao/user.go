@@ -22,6 +22,14 @@ func NewUserDao(db *gorm.DB) *UserDao {
 	}
 }
 
+// 更新用户信息
+func (dao *UserDao) Updates(ctx context.Context, user User) error {
+	now := time.Now().UnixMilli()
+	user.Utime = now
+	return dao.db.Model(&user).Where("email = ?", user.Email).Updates(user).Error
+}
+
+// 通过email查询信息
 func (dao *UserDao) FindByEmail(ctx context.Context, email string) (User, error) {
 	var u User
 	err := dao.db.WithContext(ctx).Where("email = ?", email).First(&u).Error

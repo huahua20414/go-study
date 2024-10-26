@@ -49,7 +49,7 @@ func initServer() *gin.Engine {
 	//检验是否有session的中间件
 	server.Use(middleware.NewLoginMiddlewareBuilder().
 		IgnorePaths("/users/signup").
-		IgnorePaths("/users/signup").Build())
+		IgnorePaths("/users/login").Build())
 
 	return server
 }
