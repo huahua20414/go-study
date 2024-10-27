@@ -72,7 +72,11 @@ func (u *UserHandler) Login(c *gin.Context) {
 	//设置cookie
 	sess := sessions.Default(c)
 	sess.Set("userId", user.Id)
+	sess.Options(sessions.Options{
+		MaxAge: 30,
+	})
 	if err := sess.Save(); err != nil {
+		c.String(200, err.Error())
 		return
 	}
 	c.String(200, "登录成功")
