@@ -55,12 +55,18 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 			//密钥
 			return []byte("3d1c198b9d0eb074f348227c07a088bdc66910b1bb34f7678923849e45478200"), nil
 		})
+		if claims.UserAgent != c.Request.UserAgent() {
+			//严重的安全问题
+			c.AbortWithStatus(401)
+			return
+		}
 		//有错误 过期了 uid为初始值0
 		if err != nil || !token.Valid || claims.Uid == 0 {
 			//解析失败 没有登陆
 			c.AbortWithStatus(401)
 			return
 		}
+		//如果没有过期
 		//每十秒钟刷新一次
 		now := time.Now()
 		if claims.ExpiresAt.Sub(now) < time.Second*50 {
@@ -75,7 +81,6 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 			c.Header("x-jwt-token", tokenStr)
 		}
 		//err为空即解析成功用户可以登录,每次请求接口时都将Authorization解析后并设置claims,里面有id等
-		//会话设置不需要保存
 		c.Set("claims", claims)
 	}
 }

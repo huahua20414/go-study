@@ -79,7 +79,8 @@ func (u *UserHandler) LoginJwt(c *gin.Context) {
 			//设置1分钟的过期时间
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)),
 		},
-		Uid: user.Id,
+		Uid:       user.Id,
+		UserAgent: c.Request.UserAgent(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	//加密
