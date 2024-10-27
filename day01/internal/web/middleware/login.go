@@ -31,6 +31,7 @@ func (l *LoginMiddlewareBuilder) Build() gin.HandlerFunc {
 				return
 			}
 		}
+		//redis校验
 		//检验userId是否有内容如果是空就返回401并且结束,否则就让他进去
 		sess := sessions.Default(c)
 		id := sess.Get("userId")

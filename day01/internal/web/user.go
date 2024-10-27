@@ -4,9 +4,11 @@ import (
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"go-study/day01/internal/domain"
 	"go-study/day01/internal/service"
 	"net/http"
+	"time"
 )
 
 // 错误参数
@@ -40,13 +42,56 @@ func (u UserHandler) RegisterUserRoutes(server *gin.Engine) {
 	ug := server.Group("/users")
 
 	ug.POST("signup", u.SignUp)
-	ug.POST("login", u.Login)
+	//ug.POST("login", u.Login)
+	ug.POST("login", u.LoginJwt)
 	ug.POST("edit", u.Edit)
-	ug.GET("profile", u.Profile)
+	ug.GET("profile", u.ProfileJWT)
 
 }
 
 // 登录
+func (u *UserHandler) LoginJwt(c *gin.Context) {
+	type LoginReq struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	var req LoginReq
+	if err := c.ShouldBind(&req); err != nil {
+		//c.String(200, err.Error())
+		return
+	}
+	user, err := u.svc.Login(c, domain.User{
+		Email:    req.Email,
+		Password: req.Password,
+	})
+	if err == service.ErrInvalidUserOrPassword {
+		c.String(200, "用户名或者密码不对")
+		return
+	}
+	if err != nil {
+		c.String(500, "系统错误")
+		return
+	}
+	//生成token claims对象
+	claims := domain.UserClaims{
+		//设置参数
+		RegisteredClaims: jwt.RegisteredClaims{
+			//设置1分钟的过期时间
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)),
+		},
+		Uid: user.Id,
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	//加密
+	tokenStr, err := token.SignedString([]byte("3d1c198b9d0eb074f348227c07a088bdc66910b1bb34f7678923849e45478200"))
+	if err != nil {
+		c.String(500, "系统错误")
+		return
+	}
+	c.Header("x-jwt-token", tokenStr)
+	c.String(200, "登录成功")
+}
+
 func (u *UserHandler) Login(c *gin.Context) {
 	type LoginReq struct {
 		Email    string `json:"email"`
@@ -75,6 +120,7 @@ func (u *UserHandler) Login(c *gin.Context) {
 	sess.Options(sessions.Options{
 		MaxAge: 30,
 	})
+	//cookie保存后会生成一个mvsession(自己起的名)的cookie
 	if err := sess.Save(); err != nil {
 		c.String(200, err.Error())
 		return
@@ -159,4 +205,18 @@ func (u *UserHandler) Edit(c *gin.Context) {
 }
 func (u *UserHandler) Profile(c *gin.Context) {
 	c.String(200, "登录成功")
+}
+func (u *UserHandler) ProfileJWT(ctx *gin.Context) {
+	c, ok := ctx.Get("claims")
+	if !ok {
+		//很奇怪的错误,因为登录的时候已经设置了
+		ctx.String(200, "系统错误")
+		return
+	}
+	claims, ok := c.(*domain.UserClaims)
+	if !ok {
+		ctx.String(200, "系统错误")
+		return
+	}
+	println(claims.Uid)
 }

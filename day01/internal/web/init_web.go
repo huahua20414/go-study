@@ -21,7 +21,7 @@ func RegisterRoutes() *gin.Engine {
 	//初始化UserHandler
 	u := initUser(db)
 
-	//初始化路由,配置跨域
+	//初始化路由,配置跨域和redis缓存判断用户是否登录并刷新缓存时间
 	server := initServer()
 
 	//注册用户路由
@@ -35,10 +35,12 @@ func initServer() *gin.Engine {
 	server := gin.Default()
 	//跨域中间件
 	server.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000"}, // 设置允许的来源
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Content-Type", "Authorization"},
-		ExposeHeaders:    []string{"Content-Length"},
+		AllowOrigins: []string{"http://localhost:3000"}, // 设置允许的来源
+		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		//允许拿什么
+		AllowHeaders:  []string{"Content-Type", "Authorization", "x-jwt-token"},
+		ExposeHeaders: []string{"Content-Length"},
+		//是否允许携带cookie
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour, // 缓存 CORS 设置
 	}))
@@ -50,7 +52,10 @@ func initServer() *gin.Engine {
 	}
 	server.Use(sessions.Sessions("mvsession", store))
 	//检验是否有session的中间件
-	server.Use(middleware.NewLoginMiddlewareBuilder().
+	//server.Use(middleware.NewLoginMiddlewareBuilder().
+	//	IgnorePaths("/users/signup").
+	//	IgnorePaths("/users/login").Build())
+	server.Use(middleware.NewLoginJWTMiddlewareBuilder().
 		IgnorePaths("/users/signup").
 		IgnorePaths("/users/login").Build())
 
