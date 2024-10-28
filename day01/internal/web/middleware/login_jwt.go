@@ -80,6 +80,7 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 			//重新设置一个token
 			c.Header("x-jwt-token", tokenStr)
 		}
+		//如果在十秒钟之内
 		//err为空即解析成功用户可以登录,每次请求接口时都将Authorization解析后并设置claims,里面有id等
 		c.Set("claims", claims)
 	}
