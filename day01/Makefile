@@ -6,8 +6,8 @@ docker:
 	# remove file day01 if exits
 	@rm day01 || true
 	# Delete the existing mirrors.
-	@docker rmi -f huahua/day01:v0.0.2
+	@docker rmi -f huahua/day01:v0.0.3
 	# Create a linux executable file
-	@GOOS="linux" GOARCH="arm" go build -o day01 .
+	@GOOS="linux" GOARCH="arm" go build -tags=k8s -o day01 .
 	# Pull this image through the Dockerfile configuration
-	@docker build --no-cache -t huahua/day01:v0.0.2 .
+	@docker build --no-cache -t huahua/day01:v0.0.4 .

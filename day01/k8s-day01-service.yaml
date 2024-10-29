@@ -9,7 +9,7 @@ spec:
   ports:
     - protocol: TCP
       # 外部访问的端口
-      port: 80
+      port: 8081
       # 转发到内部pod容器的8080端口
       targetPort: 8080
 

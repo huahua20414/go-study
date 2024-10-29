@@ -1,14 +1,10 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
+	"go-study/day01/internal/web"
 )
 
 func main() {
-	//server := web.RegisterRoutes()
-	server := gin.Default()
-	server.GET("/login", func(c *gin.Context) {
-		c.String(200, "成功")
-	})
+	server := web.RegisterRoutes()
 	server.Run(":8080")
 }

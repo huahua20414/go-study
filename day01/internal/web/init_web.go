@@ -6,6 +6,7 @@ import (
 	"github.com/gin-contrib/sessions/memstore"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
+	"go-study/day01/config"
 	"go-study/day01/internal/repository"
 	"go-study/day01/internal/repository/dao"
 	"go-study/day01/internal/service"
@@ -39,7 +40,7 @@ func initServer() *gin.Engine {
 	//配置限流中间件
 	//初始化redis
 	redisClient := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
+		Addr: config.Config.Redis.Addr,
 	})
 	server.Use(ratelimit.NewBuilder(redisClient, time.Second, 100).Build())
 	//跨域中间件
@@ -84,7 +85,7 @@ func initUser(db *gorm.DB) *UserHandler {
 }
 func initDB() *gorm.DB {
 	//初始化配置信息
-	db, err := gorm.Open(mysql.Open("root:root@tcp(localhost:13316)/webook"))
+	db, err := gorm.Open(mysql.Open(config.Config.DB.DSN))
 	if err != nil {
 		panic(err)
 	}
