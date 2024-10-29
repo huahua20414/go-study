@@ -18,6 +18,6 @@ spec:
     spec:
       containers:
         - name: day01
-          image: flycash/day1:v0.0.1
+          image: huahua/day01:v0.0.2
           ports:
-            - containerPort: 8080 
+            - containerPort: 8080

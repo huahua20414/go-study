@@ -1,0 +1,17 @@
+apiVersion: v1
+# 类型
+kind: PersistentVolumeClaim
+metadata:
+# 对应mysql-development文件
+  name:  day01-mysql-claim
+spec:
+  # 对应pv文件
+  storageClassName: mysql-pv
+  accessModes:
+    # 多读写
+    - ReadWriteMany
+  resources:
+    requests:
+      # 1GB
+      storage: 1Gi
+  
