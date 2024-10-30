@@ -8,6 +8,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go-study/day01/config"
 	"go-study/day01/internal/repository"
+	cache2 "go-study/day01/internal/repository/cache"
 	"go-study/day01/internal/repository/dao"
 	"go-study/day01/internal/service"
 	"go-study/day01/internal/web/middleware"
@@ -45,7 +46,7 @@ func initServer() *gin.Engine {
 	server.Use(ratelimit.NewBuilder(redisClient, time.Second, 100).Build())
 	//跨域中间件
 	server.Use(cors.New(cors.Config{
-		AllowOrigins: []string{"http://localhost:3000"}, // 设置允许的来源
+		AllowOrigins: []string{"http://localhost"}, // 设置允许的来源
 		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		//允许拿什么
 		AllowHeaders:  []string{"Content-Type", "Authorization", "x-jwt-token"},
@@ -78,7 +79,11 @@ func initServer() *gin.Engine {
 func initUser(db *gorm.DB) *UserHandler {
 	//初始化对象
 	ud := dao.NewUserDao(db)
-	repo := repository.NewUserRepository(ud)
+	//用来去redis查缓存的数据
+	cache1 := cache2.NewUserCache(redis.NewClient(&redis.Options{
+		Addr: config.Config.Redis.Addr,
+	}), time.Minute*15)
+	repo := repository.NewUserRepository(ud, cache1)
 	svc := service.NewUserService(repo)
 	u := NewUserHandler(svc)
 	return u

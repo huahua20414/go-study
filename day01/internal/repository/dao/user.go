@@ -36,8 +36,15 @@ func (dao *UserDao) FindByEmail(ctx context.Context, email string) (User, error)
 	return u, err
 }
 
+// 通过id查询信息
+func (dao *UserDao) FindById(ctx context.Context, id int64) (User, error) {
+	var u User
+	err := dao.db.WithContext(ctx).Where("id = ?", id).First(&u).Error
+	return u, err
+}
+
 // 插入用户
-func (dao *UserDao) Insert(ctx context.Context, u User) error {
+func (dao *UserDao) Insert(ctx context.Context, u *User) error {
 	//存毫秒数
 	now := time.Now().UnixMilli()
 	u.Utime = now

@@ -3,7 +3,7 @@
 # 要注意文件分隔符使用 Windows 的分隔符。
 .PHONY: docker
 docker:
-	# remove file day01 if exits
+	# remove file day01 if exits 
 	@rm day01 || true
 	# Delete the existing mirrors.
 	@docker rmi -f huahua/day01:v0.0.3

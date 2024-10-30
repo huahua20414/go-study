@@ -76,8 +76,8 @@ func (u *UserHandler) LoginJwt(c *gin.Context) {
 	claims := domain.UserClaims{
 		//设置参数
 		RegisteredClaims: jwt.RegisteredClaims{
-			//设置1分钟的过期时间
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)),
+			//设置60分钟的过期时间
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 60)),
 		},
 		Uid:       user.Id,
 		UserAgent: c.Request.UserAgent(),
@@ -117,6 +117,7 @@ func (u *UserHandler) Login(c *gin.Context) {
 	}
 	//设置cookie
 	sess := sessions.Default(c)
+	//不是唯一的key不推荐
 	sess.Set("userId", user.Id)
 	sess.Options(sessions.Options{
 		MaxAge: 30,
@@ -176,6 +177,10 @@ func (u *UserHandler) SignUp(c *gin.Context) {
 		})
 		return
 	}
+	if err != nil {
+		c.String(500, "系统错误")
+		return
+	}
 	c.JSON(200, gin.H{
 		"code": 200,
 		"msg":  "success",
@@ -219,5 +224,13 @@ func (u *UserHandler) ProfileJWT(ctx *gin.Context) {
 		ctx.String(200, "系统错误")
 		return
 	}
-	println(claims.Uid)
+	//在这里调用service接口去查个人信息
+	profile, err := u.svc.Profile(ctx, claims.Uid)
+	if err != nil {
+		//日志
+	}
+	ctx.JSON(200, gin.H{
+		"code":    200,
+		"profile": profile,
+	})
 }

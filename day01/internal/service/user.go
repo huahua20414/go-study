@@ -53,17 +53,6 @@ func (svc *UserService) Edit(ctx context.Context, email string, op string, np st
 	return nil
 }
 
-// 注册
-func (svc *UserService) SignUp(ctx context.Context, u domain.User) error {
-	//加密
-	hash, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
-	if err != nil {
-		return err
-	}
-	u.Password = string(hash)
-	return svc.repo.Create(ctx, u)
-}
-
 // 登录
 func (svc *UserService) Login(ctx context.Context, user domain.User) (domain.User, error) {
 	//先查是否有这个用户
@@ -77,6 +66,24 @@ func (svc *UserService) Login(ctx context.Context, user domain.User) (domain.Use
 	if err != nil {
 		//返回账号或者密码错误
 		return domain.User{}, ErrInvalidUserOrPassword
+	}
+	return u, nil
+}
+
+// 注册
+func (svc *UserService) SignUp(ctx context.Context, u domain.User) error {
+	//加密
+	hash, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	u.Password = string(hash)
+	return svc.repo.Create(ctx, u)
+}
+func (svc *UserService) Profile(ctx context.Context, id int64) (domain.User, error) {
+	u, err := svc.repo.FindById(ctx, id)
+	if err != nil {
+		return domain.User{}, err
 	}
 	return u, nil
 }
