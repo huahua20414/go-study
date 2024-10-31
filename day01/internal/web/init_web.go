@@ -83,7 +83,7 @@ func initServer() *gin.Engine {
 	return server
 }
 
-// 初始化要使用的userhandler对象
+// 初始化要使用的userhandler对象1
 func initUser(db *gorm.DB) *UserHandler {
 	//初始化对象
 	ud := dao.NewUserDao(db)
