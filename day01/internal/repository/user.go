@@ -5,9 +5,10 @@ import (
 	"go-study/day01/internal/domain"
 	"go-study/day01/internal/repository/cache"
 	"go-study/day01/internal/repository/dao"
+	"time"
 )
 
-var ErrUserDulicateEmail = dao.ErrUserDulicateEmail
+var ErrUserDulicatePhone = dao.ErrUserDulicatePhone
 
 type UserRepository struct {
 	dao   *dao.UserDao
@@ -21,23 +22,23 @@ func NewUserRepository(dao *dao.UserDao, cache *cache.UserCache) *UserRepository
 
 // 修改密码
 func (r *UserRepository) Update(ctx context.Context, user domain.User) error {
-	return r.dao.Updates(ctx, dao.User{Email: user.Email, Password: user.Password})
+	return r.dao.Updates(ctx, dao.User{Phone: user.Phone, Password: user.Password})
 }
 
-func (r *UserRepository) FindByEmail(ctx context.Context, email string) (domain.User, error) {
-	user, err := r.dao.FindByEmail(ctx, email)
+func (r *UserRepository) FindByPhone(ctx context.Context, phone string) (domain.User, error) {
+	user, err := r.dao.FindByPhone(ctx, phone)
 	if err != nil {
 		return domain.User{}, err
 	}
 	return domain.User{
 		Id:       user.Id,
-		Email:    user.Email,
+		Phone:    user.Phone,
 		Password: user.Password,
 	}, nil
 }
 
 func (r *UserRepository) Create(ctx context.Context, u domain.User) error {
-	user := dao.User{Email: u.Email, Password: u.Password}
+	user := dao.User{Phone: u.Phone, Password: u.Password}
 	err := r.dao.Insert(ctx, &user)
 	if err != nil {
 		return err
@@ -62,7 +63,7 @@ func (r *UserRepository) FindById(ctx context.Context, id int64) (domain.User, e
 		}
 		user := domain.User{
 			Id:       u.Id,
-			Email:    u.Email,
+			Phone:    u.Phone,
 			Password: u.Password,
 			Ctime:    u.Ctime,
 			Utime:    u.Utime,
@@ -77,4 +78,23 @@ func (r *UserRepository) FindById(ctx context.Context, id int64) (domain.User, e
 	//没数据,考虑redis崩掉，要不要去数据库查，做限流
 	return domain.User{}, err
 
+}
+
+// 设置验证码缓存
+func (r *UserRepository) SetVerification(ctx context.Context, user domain.User) error {
+	user.Utime = time.Now().Unix()
+	err := r.cache.Set(ctx, user)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// 获取验证码缓存
+func (r *UserRepository) GetVerification(ctx context.Context, u domain.User) (domain.User, error) {
+	user, err := r.cache.GetVerification(ctx, u)
+	if err != nil {
+		return domain.User{}, err
+	}
+	return user, nil
 }

@@ -69,9 +69,9 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 		//如果没有过期
 		//每一分钟刷新一次
 		now := time.Now()
-		if claims.ExpiresAt.Sub(now) < time.Minute*9 {
-			//claims是用来生成token的有关对象,设置一个新的token一分钟有效期
-			claims.ExpiresAt = jwt.NewNumericDate(time.Now().Add(time.Minute * 10))
+		if claims.ExpiresAt.Sub(now) < time.Hour*11 {
+			//claims是用来生成token的有关对象,设置一个新的token 12小时有效期
+			claims.ExpiresAt = jwt.NewNumericDate(time.Now().Add(time.Hour * 12))
 			tokenStr, err := token.SignedString([]byte("3d1c198b9d0eb074f348227c07a088bdc66910b1bb34f7678923849e45478200"))
 			if err != nil {
 				log.Println("续约失败")

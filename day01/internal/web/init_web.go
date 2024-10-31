@@ -1,20 +1,28 @@
 package web
 
 import (
+	"fmt"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/memstore"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
+	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
+	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
+	sms "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms/v20210111"
 	"go-study/day01/config"
 	"go-study/day01/internal/repository"
 	cache2 "go-study/day01/internal/repository/cache"
 	"go-study/day01/internal/repository/dao"
 	"go-study/day01/internal/service"
+	"go-study/day01/internal/service/sms/email"
+	"go-study/day01/internal/service/sms/tencent"
 	"go-study/day01/internal/web/middleware"
 	"go-study/day01/pkg/ginx/middleware/ratelimit"
+	"gopkg.in/gomail.v2"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"os"
 	"time"
 )
 
@@ -70,8 +78,8 @@ func initServer() *gin.Engine {
 	//检验是否有session的中间件 jwt实现
 	server.Use(middleware.NewLoginJWTMiddlewareBuilder().
 		IgnorePaths("/users/signup").
-		IgnorePaths("/users/login").Build())
-
+		IgnorePaths("/users/login").
+		IgnorePaths("/users/sms").Build())
 	return server
 }
 
@@ -82,9 +90,45 @@ func initUser(db *gorm.DB) *UserHandler {
 	//用来去redis查缓存的数据
 	cache1 := cache2.NewUserCache(redis.NewClient(&redis.Options{
 		Addr: config.Config.Redis.Addr,
-	}), time.Minute*15)
+	}), time.Minute*15, time.Minute*5)
 	repo := repository.NewUserRepository(ud, cache1)
-	svc := service.NewUserService(repo)
+	//初始化邮箱验证码配置
+	m := gomail.NewMessage()
+	m.SetHeader("From", "HuaHua<"+"2041436630@qq.com"+">") // 设置发件人别名
+	m.SetHeader("Subject", "您的验证码")                   // 邮件主题
+
+	PASSWORD, ok := os.LookupEnv("SMS_PASSWORD")
+	if !ok {
+		fmt.Println("no sms_password")
+	}
+	d := gomail.NewDialer(
+		"smtp.qq.com",
+		465,
+		"2041436630@qq.com",
+		PASSWORD,
+	)
+	//初始化腾讯云短信配置
+
+	//创建sms对象
+	secretId, ok := os.LookupEnv("SMS_SECRET_ID")
+	if !ok {
+		fmt.Println("SMS_SECRET_ID is empty")
+	}
+	secretKey, ok := os.LookupEnv("SMS_SECRET_KEY")
+	if !ok {
+		fmt.Println("SMS_SECRET_KEY is empty")
+	}
+	c, err := sms.NewClient(common.NewCredential(secretId, secretKey),
+		"ap-nanjing",
+		profile.NewClientProfile())
+	if err != nil {
+		//打印到日志中
+	}
+	//模板id，签名名称,创建sms接口对象
+	s := tencent.NewService(c, "1400946141", "goLang科技公众号")
+
+	el := email.NewService(d, m)
+	svc := service.NewUserService(repo, el, s)
 	u := NewUserHandler(svc)
 	return u
 }

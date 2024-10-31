@@ -9,7 +9,7 @@ import (
 )
 
 // 错误
-var ErrUserDulicateEmail = errors.New("邮箱冲突")
+var ErrUserDulicatePhone = errors.New("手机号冲突")
 
 type UserDao struct {
 	db *gorm.DB
@@ -26,13 +26,13 @@ func NewUserDao(db *gorm.DB) *UserDao {
 func (dao *UserDao) Updates(ctx context.Context, user User) error {
 	now := time.Now().UnixMilli()
 	user.Utime = now
-	return dao.db.Model(&user).Where("email = ?", user.Email).Updates(user).Error
+	return dao.db.Model(&user).Where("phone = ?", user.Phone).Updates(user).Error
 }
 
-// 通过email查询信息
-func (dao *UserDao) FindByEmail(ctx context.Context, email string) (User, error) {
+// 通过phone查询信息
+func (dao *UserDao) FindByPhone(ctx context.Context, phone string) (User, error) {
 	var u User
-	err := dao.db.WithContext(ctx).Where("email = ?", email).First(&u).Error
+	err := dao.db.WithContext(ctx).Where("phone = ?", phone).First(&u).Error
 	return u, err
 }
 
@@ -54,7 +54,7 @@ func (dao *UserDao) Insert(ctx context.Context, u *User) error {
 	if mysqlErr, ok := err.(*mysql.MySQLError); ok {
 		if mysqlErr.Number == 1062 {
 			//邮箱冲突
-			return ErrUserDulicateEmail
+			return ErrUserDulicatePhone
 		}
 	}
 	return err
@@ -62,7 +62,8 @@ func (dao *UserDao) Insert(ctx context.Context, u *User) error {
 
 type User struct {
 	Id       int64  `gorm:"type:bigint;primarykey;autoIncrement"`
-	Email    string `gorm:"type:varchar(70);unique"`
+	Phone    string `gorm:"type:varchar(20);unique"`
+	Email    string `gorm:"type:varchar(70);`
 	Password string `gorm:"type:varchar(255)"`
 	Ctime    int64  `gorm:"type:bigint"`
 	Utime    int64  `gorm:"type:bigint"`

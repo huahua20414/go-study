@@ -5,6 +5,7 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/redis/go-redis/v9"
 	"go-study/day01/internal/domain"
 	"go-study/day01/internal/service"
 	"net/http"
@@ -13,19 +14,25 @@ import (
 
 // 错误参数
 var (
-	ErrUserDulicateEmail = service.ErrUserDulicateEmail
+	ErrUserDulicatePhone = service.ErrUserDulicatePhone
+	ErrBusyVerification  = service.ErrBusyVerification
+	ErrVerificationFalse = service.ErrVerificationFalse
+	ErrUserHave          = service.ErrUserHave
+	ErrUserNil           = service.ErrUserNil
 )
 
 // 校验参数
 const (
 	emailRegexPattern    = "^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*$"
-	passwordRegexPattern = `^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,}$`
+	passwordRegexPattern = `^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$`
+	phoneRegexPattern    = `^1[3-9]\d{9}$`
 )
 
 type UserHandler struct {
 	svc                  *service.UserService
 	emailRegexExp        *regexp.Regexp
 	passwordRegexPattern *regexp.Regexp
+	phoneRegexExp        *regexp.Regexp
 }
 
 // 只需要传入一个service对象
@@ -34,6 +41,7 @@ func NewUserHandler(svc *service.UserService) *UserHandler {
 		svc:                  svc,
 		emailRegexExp:        regexp.MustCompile(emailRegexPattern, regexp.None),
 		passwordRegexPattern: regexp.MustCompile(passwordRegexPattern, regexp.None),
+		phoneRegexExp:        regexp.MustCompile(phoneRegexPattern, regexp.None),
 	}
 }
 
@@ -44,15 +52,61 @@ func (u UserHandler) RegisterUserRoutes(server *gin.Engine) {
 	ug.POST("signup", u.SignUp)
 	//ug.POST("login", u.Login)
 	ug.POST("login", u.LoginJwt)
+	ug.POST("sms", u.Sms)
 	ug.POST("edit", u.Edit)
 	ug.GET("profile", u.ProfileJWT)
+
+}
+
+// 验证码发送
+func (u *UserHandler) Sms(c *gin.Context) {
+	type SmsReq struct {
+		Phone    string `json:"phone"`
+		CodeType string `json:"codeType"`
+	}
+	var req SmsReq
+	if err := c.ShouldBind(&req); err != nil {
+		c.String(500, "系统错误")
+		return
+	}
+	isPhone, err := u.phoneRegexExp.MatchString(req.Phone)
+	if err != nil {
+		c.String(500, "系统错误")
+		return
+	}
+	if !isPhone {
+		c.String(http.StatusOK, "手机号格式不正确")
+		return
+	}
+	//邮箱格式正确
+	err = u.svc.Sms(c, domain.User{
+		Phone:    req.Phone,
+		CodeType: req.CodeType,
+	})
+	if err == ErrBusyVerification {
+		c.String(200, "一分钟后再试")
+		return
+	}
+	if err == ErrUserHave {
+		c.String(200, "此用户已经注册")
+		return
+	}
+	if err == ErrUserNil {
+		c.String(200, "没有此用户")
+		return
+	}
+	if err != nil {
+		c.String(500, "系统错误")
+		return
+	}
+	c.String(200, "发送验证码成功")
 
 }
 
 // 登录
 func (u *UserHandler) LoginJwt(c *gin.Context) {
 	type LoginReq struct {
-		Email    string `json:"email"`
+		Phone    string `json:"phone"`
 		Password string `json:"password"`
 	}
 	var req LoginReq
@@ -61,15 +115,11 @@ func (u *UserHandler) LoginJwt(c *gin.Context) {
 		return
 	}
 	user, err := u.svc.Login(c, domain.User{
-		Email:    req.Email,
+		Phone:    req.Phone,
 		Password: req.Password,
 	})
-	if err == service.ErrInvalidUserOrPassword {
-		c.String(200, "用户名或者密码不对")
-		return
-	}
 	if err != nil {
-		c.String(500, "系统错误")
+		c.String(500, "用户名或者密码不对")
 		return
 	}
 	//生成token claims对象
@@ -95,7 +145,7 @@ func (u *UserHandler) LoginJwt(c *gin.Context) {
 
 func (u *UserHandler) Login(c *gin.Context) {
 	type LoginReq struct {
-		Email    string `json:"email"`
+		Phone    string `json:"phone"`
 		Password string `json:"password"`
 	}
 	var req LoginReq
@@ -104,7 +154,7 @@ func (u *UserHandler) Login(c *gin.Context) {
 		return
 	}
 	user, err := u.svc.Login(c, domain.User{
-		Email:    req.Email,
+		Phone:    req.Phone,
 		Password: req.Password,
 	})
 	if err == service.ErrInvalidUserOrPassword {
@@ -133,22 +183,23 @@ func (u *UserHandler) Login(c *gin.Context) {
 // 注册
 func (u *UserHandler) SignUp(c *gin.Context) {
 	type SignUpReq struct {
-		Email           string `json:"email"`
+		Phone           string `json:"phone"`
 		ConfirmPassword string `json:"confirmPassword"`
 		Password        string `json:"password"`
+		Verification    string `json:"verification"`
 	}
 	var req SignUpReq
 	//绑定到req对象
 	if err := c.ShouldBind(&req); err != nil {
 		return
 	}
-	isEmail, err := u.emailRegexExp.MatchString(req.Email)
+	isPhone, err := u.phoneRegexExp.MatchString(req.Phone)
 	if err != nil {
 		c.String(http.StatusOK, "系统错误")
 		return
 	}
-	if !isEmail {
-		c.String(http.StatusOK, "邮箱不正确")
+	if !isPhone {
+		c.String(http.StatusOK, "手机号不正确")
 		return
 	}
 
@@ -164,16 +215,28 @@ func (u *UserHandler) SignUp(c *gin.Context) {
 	}
 	if !isPassword {
 		c.String(http.StatusOK,
-			"密码必须包含数字、特殊字符，并且长度不能小于 8 位")
+			"密码必须包含数字、字母，并且长度不能小于 8 位")
 		return
 	}
 	//调用service
-	err = u.svc.SignUp(c, domain.User{Email: req.Email,
-		Password: req.Password})
-	if err == ErrUserDulicateEmail {
+	err = u.svc.SignUp(c, domain.User{Phone: req.Phone,
+		Password: req.Password, Verification: req.Verification, CodeType: "register"})
+	if err == ErrUserDulicatePhone {
 		c.JSON(200, gin.H{
 			"code":    200,
-			"message": "邮箱冲突",
+			"message": "手机号已被注册",
+		})
+		return
+	} else if err == ErrVerificationFalse {
+		c.JSON(200, gin.H{
+			"code":    200,
+			"message": "验证码错误",
+		})
+		return
+	} else if err == redis.Nil {
+		c.JSON(200, gin.H{
+			"code":    200,
+			"message": "验证码错误",
 		})
 		return
 	}
@@ -190,7 +253,7 @@ func (u *UserHandler) SignUp(c *gin.Context) {
 
 func (u *UserHandler) Edit(c *gin.Context) {
 	type EditReq struct {
-		Email       string `json:"email"`
+		Phone       string `json:"phone"`
 		OldPassword string `json:"oldPassword"`
 		NewPassword string `json:"newPassword"`
 	}
@@ -198,7 +261,7 @@ func (u *UserHandler) Edit(c *gin.Context) {
 	if err := c.ShouldBind(&req); err != nil {
 		return
 	}
-	err := u.svc.Edit(c, req.Email, req.OldPassword, req.NewPassword)
+	err := u.svc.Edit(c, req.Phone, req.OldPassword, req.NewPassword)
 	if err == service.ErrInvalidPassword {
 		c.String(200, "密码错误")
 		return
@@ -209,9 +272,7 @@ func (u *UserHandler) Edit(c *gin.Context) {
 	}
 	c.String(200, "修改成功")
 }
-func (u *UserHandler) Profile(c *gin.Context) {
-	c.String(200, "登录成功")
-}
+
 func (u *UserHandler) ProfileJWT(ctx *gin.Context) {
 	c, ok := ctx.Get("claims")
 	if !ok {
