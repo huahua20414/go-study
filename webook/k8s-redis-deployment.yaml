@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: day01-redis
+  labels:
+    app: day01-redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: day01-redis
+  template:
+    metadata:
+      name: day01-redis
+      labels:
+        app: day01-redis
+    spec:
+      containers:
+        - name: day01-redis
+          image: redis:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 6379
+              protocol: TCP
+      restartPolicy: Always
+      

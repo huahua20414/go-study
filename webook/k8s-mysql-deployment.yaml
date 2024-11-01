@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: day01-mysql
+  labels:
+    app: day01-mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: day01-mysql
+  template:
+    metadata:
+      name: day01-mysql
+      labels:
+        app: day01-mysql
+    spec:
+      containers:
+        - name: day01-mysql
+          image: mysql:8.0.29
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: root
+          imagePullPolicy: IfNotPresent
+          # 挂载
+          volumeMounts:
+            # 这边一定要对应到mysql内部存储位置
+            - mountPath: /var/lib/mysql
+              # volumes的name
+              name: mysql-storage
+          ports:
+            - containerPort: 3306
+      restartPolicy: Always
+      #存储mysql
+      volumes:
+        - name: mysql-storage
+          persistentVolumeClaim:
+            # 对应pvc文件的name
+            claimName: day01-mysql-claim
+      
