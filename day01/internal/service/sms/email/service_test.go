@@ -24,6 +24,7 @@ func TestSend(t *testing.T) {
 		PASSWORD,
 	)
 	gomail1 := NewService(d, m)
+	//要发送给谁
 	gomail1.Send("2041436630@qq.com")
 
 }

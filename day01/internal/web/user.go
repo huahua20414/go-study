@@ -52,17 +52,19 @@ func (u UserHandler) RegisterUserRoutes(server *gin.Engine) {
 	ug.POST("signup", u.SignUp)
 	//ug.POST("login", u.Login)
 	ug.POST("login", u.LoginJwt)
-	ug.POST("sms", u.Sms)
+	ug.POST("/:action/code/send", u.Sms)
 	ug.POST("edit", u.Edit)
 	ug.GET("profile", u.ProfileJWT)
-
 }
+
+func (u *UserHandler) LoginSms(c *gin.Context)  {}
+func (u *UserHandler) ForgetSms(c *gin.Context) {}
 
 // 验证码发送
 func (u *UserHandler) Sms(c *gin.Context) {
+
 	type SmsReq struct {
-		Phone    string `json:"phone"`
-		CodeType string `json:"codeType"`
+		Phone string `json:"phone"`
 	}
 	var req SmsReq
 	if err := c.ShouldBind(&req); err != nil {
@@ -78,11 +80,21 @@ func (u *UserHandler) Sms(c *gin.Context) {
 		c.String(http.StatusOK, "手机号格式不正确")
 		return
 	}
-	//邮箱格式正确
-	err = u.svc.Sms(c, domain.User{
-		Phone:    req.Phone,
-		CodeType: req.CodeType,
-	})
+
+	//这里判断codeType
+	u1 := domain.User{Phone: req.Phone}
+	codeType := c.Params[0].Value
+	if codeType == "register_sms" {
+		u1.CodeType = "register"
+		err = u.svc.RegisterSms(c, u1)
+	} else if codeType == "login_sms" {
+		u1.CodeType = "login"
+		//err = u.svc.LoginSms(c, u1)
+	} else if codeType == "forget_sms" {
+		u1.CodeType = "forget"
+		err = u.svc.ForgetSms(c, u1)
+	}
+
 	if err == ErrBusyVerification {
 		c.String(200, "一分钟后再试")
 		return

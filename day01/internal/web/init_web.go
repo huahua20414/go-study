@@ -54,7 +54,7 @@ func initServer() *gin.Engine {
 	server.Use(ratelimit.NewBuilder(redisClient, time.Second, 100).Build())
 	//跨域中间件
 	server.Use(cors.New(cors.Config{
-		AllowOrigins: []string{"http://localhost"}, // 设置允许的来源
+		AllowOrigins: []string{"http://localhost:3000"}, // 设置允许的来源
 		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		//允许拿什么
 		AllowHeaders:  []string{"Content-Type", "Authorization", "x-jwt-token"},
@@ -79,7 +79,9 @@ func initServer() *gin.Engine {
 	server.Use(middleware.NewLoginJWTMiddlewareBuilder().
 		IgnorePaths("/users/signup").
 		IgnorePaths("/users/login").
-		IgnorePaths("/users/sms").Build())
+		IgnorePaths("/users/login_sms/code/send").
+		IgnorePaths("/users/register_sms/code/send").
+		IgnorePaths("/users/forget_sms/code/send").Build())
 	return server
 }
 
@@ -91,11 +93,18 @@ func initUser(db *gorm.DB) *UserHandler {
 	cache1 := cache2.NewUserCache(redis.NewClient(&redis.Options{
 		Addr: config.Config.Redis.Addr,
 	}), time.Minute*15, time.Minute*5)
-	repo := repository.NewUserRepository(ud, cache1)
+	codeCache := cache2.NewCodeCache(redis.NewClient(&redis.Options{Addr: config.Config.Redis.Addr}), time.Minute*5)
+	repo := repository.NewUserRepository(ud, cache1, codeCache)
+	svc := initService(repo)
+	u := NewUserHandler(svc)
+	return u
+}
+
+func initService(repo *repository.UserRepository) *service.UserService {
 	//初始化邮箱验证码配置
 	m := gomail.NewMessage()
 	m.SetHeader("From", "HuaHua<"+"2041436630@qq.com"+">") // 设置发件人别名
-	m.SetHeader("Subject", "您的验证码")                   // 邮件主题
+	m.SetHeader("Subject", "您的验证码")                        // 邮件主题
 
 	PASSWORD, ok := os.LookupEnv("SMS_PASSWORD")
 	if !ok {
@@ -129,8 +138,7 @@ func initUser(db *gorm.DB) *UserHandler {
 
 	el := email.NewService(d, m)
 	svc := service.NewUserService(repo, el, s)
-	u := NewUserHandler(svc)
-	return u
+	return svc
 }
 func initDB() *gorm.DB {
 	//初始化配置信息

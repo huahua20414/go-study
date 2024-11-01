@@ -43,9 +43,9 @@ func TestSender(t *testing.T) {
 			name:  "发送验证码",
 			tplId: "2297671",
 			//验证码
-			params: []string{"121212"},
+			params: []string{"1231"},
 			// 改成你的手机号码
-			numbers: []string{"+8618135486860"},
+			numbers: []string{"+8619868802627"},
 		},
 	}
 	for _, tc := range testCases {

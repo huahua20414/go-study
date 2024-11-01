@@ -11,13 +11,14 @@ import (
 var ErrUserDulicatePhone = dao.ErrUserDulicatePhone
 
 type UserRepository struct {
-	dao   *dao.UserDao
-	cache *cache.UserCache
+	dao       *dao.UserDao
+	cache     *cache.UserCache
+	codeCache *cache.CodeCache
 }
 
-func NewUserRepository(dao *dao.UserDao, cache *cache.UserCache) *UserRepository {
+func NewUserRepository(dao *dao.UserDao, cache *cache.UserCache, codeCache *cache.CodeCache) *UserRepository {
 	return &UserRepository{dao: dao,
-		cache: cache}
+		cache: cache, codeCache: codeCache}
 }
 
 // 修改密码
@@ -46,8 +47,24 @@ func (r *UserRepository) Create(ctx context.Context, u domain.User) error {
 	u.Id = user.Id
 	u.Ctime = user.Ctime
 	u.Utime = user.Utime
-	return r.cache.Set(ctx, u)
+	err = r.cache.Set(ctx, u)
+	if err != nil {
+		return err
+	}
+	//设置用户信息缓存成功,删除验证码
+	u.CodeType = "register"
+	return r.RemoveCode(ctx, u)
+
 }
+
+// user里要有codetype和phone的信息
+func (r *UserRepository) RemoveCode(ctx context.Context, u domain.User) error {
+	if err := r.codeCache.RemoveCode(ctx, u); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (r *UserRepository) FindById(ctx context.Context, id int64) (domain.User, error) {
 	u, err := r.cache.Get(ctx, id)
 	if err == nil {
@@ -83,7 +100,7 @@ func (r *UserRepository) FindById(ctx context.Context, id int64) (domain.User, e
 // 设置验证码缓存
 func (r *UserRepository) SetVerification(ctx context.Context, user domain.User) error {
 	user.Utime = time.Now().Unix()
-	err := r.cache.Set(ctx, user)
+	err := r.codeCache.Set(ctx, user)
 	if err != nil {
 		return err
 	}
@@ -92,7 +109,7 @@ func (r *UserRepository) SetVerification(ctx context.Context, user domain.User) 
 
 // 获取验证码缓存
 func (r *UserRepository) GetVerification(ctx context.Context, u domain.User) (domain.User, error) {
-	user, err := r.cache.GetVerification(ctx, u)
+	user, err := r.codeCache.Get(ctx, u)
 	if err != nil {
 		return domain.User{}, err
 	}

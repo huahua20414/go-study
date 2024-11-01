@@ -63,7 +63,7 @@ func (dao *UserDao) Insert(ctx context.Context, u *User) error {
 type User struct {
 	Id       int64  `gorm:"type:bigint;primarykey;autoIncrement"`
 	Phone    string `gorm:"type:varchar(20);unique"`
-	Email    string `gorm:"type:varchar(70);`
+	Email    string `gorm:"type:varchar(70)"`
 	Password string `gorm:"type:varchar(255)"`
 	Ctime    int64  `gorm:"type:bigint"`
 	Utime    int64  `gorm:"type:bigint"`
