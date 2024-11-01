@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: day01-mysql
+  name: webook-mysql
 spec:
   selector:
-    app: day01-mysql
+    app: webook-mysql
   ports:
     - protocol: TCP
       port: 3306

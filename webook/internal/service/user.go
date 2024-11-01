@@ -25,14 +25,23 @@ var (
 	ErrVerificationFalse     = errors.New("验证码错误")
 )
 
+type UserServiceInterface interface {
+	ForgetSms(ctx context.Context, u domain.User) error
+	RegisterSms(ctx context.Context, u domain.User) error
+	Edit(ctx context.Context, phone string, op string, np string) error
+	Login(ctx context.Context, user domain.User) (domain.User, error)
+	SignUp(ctx context.Context, u domain.User) error
+	Profile(ctx context.Context, id int64) (domain.User, error)
+}
+
 type UserService struct {
-	repo    *repository.UserRepository
+	repo    repository.UserRepository
 	client  *email.Service
 	tclient *tencent.Service
 }
 
 // 初始化
-func NewUserService(repo *repository.UserRepository, client *email.Service, tc *tencent.Service) *UserService {
+func NewUserService(repo repository.UserRepository, client *email.Service, tc *tencent.Service) UserServiceInterface {
 	return &UserService{repo: repo,
 		client: client, tclient: tc}
 }

@@ -3,7 +3,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
 # 对应mysql-development文件
-  name:  day01-mysql-claim
+  name:  webook-mysql-claim
 spec:
   # 对应pv文件
   storageClassName: mysql-pv

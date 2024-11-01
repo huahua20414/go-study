@@ -29,14 +29,14 @@ const (
 )
 
 type UserHandler struct {
-	svc                  *service.UserService
+	svc                  service.UserServiceInterface
 	emailRegexExp        *regexp.Regexp
 	passwordRegexPattern *regexp.Regexp
 	phoneRegexExp        *regexp.Regexp
 }
 
 // 只需要传入一个service对象
-func NewUserHandler(svc *service.UserService) *UserHandler {
+func NewUserHandler(svc service.UserServiceInterface) *UserHandler {
 	return &UserHandler{
 		svc:                  svc,
 		emailRegexExp:        regexp.MustCompile(emailRegexPattern, regexp.None),
@@ -287,6 +287,11 @@ func (u *UserHandler) Edit(c *gin.Context) {
 }
 
 func (u *UserHandler) ProfileJWT(ctx *gin.Context) {
+	type profile struct {
+		Email string
+		Phone string
+		Ctime int64
+	}
 	c, ok := ctx.Get("claims")
 	if !ok {
 		//很奇怪的错误,因为登录的时候已经设置了
@@ -299,12 +304,16 @@ func (u *UserHandler) ProfileJWT(ctx *gin.Context) {
 		return
 	}
 	//在这里调用service接口去查个人信息
-	profile, err := u.svc.Profile(ctx, claims.Uid)
+	user, err := u.svc.Profile(ctx, claims.Uid)
 	if err != nil {
 		//日志
 	}
 	ctx.JSON(200, gin.H{
-		"code":    200,
-		"profile": profile,
+		"code": 200,
+		"profile": profile{
+			Email: user.Email,
+			Phone: user.Phone,
+			Ctime: user.Ctime,
+		},
 	})
 }

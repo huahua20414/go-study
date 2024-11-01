@@ -2,7 +2,7 @@ apiVersion: v1
 # 指的是k8s有哪些volume
 kind: PersistentVolume
 metadata:
-  name: my- -pv
+  name: mysql-pv
 spec:
   # pvc文件要用的名字
   storageClassName: mysql-pv

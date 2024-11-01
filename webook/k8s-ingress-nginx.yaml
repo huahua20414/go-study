@@ -1,18 +1,18 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: day01-ingress
+  name: webook-ingress
 spec:
   ingressClassName: nginx
   rules:
-    - host: day01
+    - host: webook
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: day01
+                name: webook
                 port:
                   number: 8081
 

@@ -11,40 +11,47 @@ import (
 // 错误
 var ErrUserDulicatePhone = errors.New("手机号冲突")
 
-type UserDao struct {
+type UserDao interface {
+	Updates(ctx context.Context, user User) error
+	FindByPhone(ctx context.Context, phone string) (User, error)
+	FindById(ctx context.Context, id int64) (User, error)
+	Insert(ctx context.Context, u *User) error
+}
+
+type GORMUserDao struct {
 	db *gorm.DB
 }
 
 // 用来初始化userdao实例
-func NewUserDao(db *gorm.DB) *UserDao {
-	return &UserDao{
+func NewUserDao(db *gorm.DB) UserDao {
+	return &GORMUserDao{
 		db: db,
 	}
 }
 
 // 更新用户信息
-func (dao *UserDao) Updates(ctx context.Context, user User) error {
+func (dao *GORMUserDao) Updates(ctx context.Context, user User) error {
 	now := time.Now().UnixMilli()
 	user.Utime = now
 	return dao.db.Model(&user).Where("phone = ?", user.Phone).Updates(user).Error
 }
 
 // 通过phone查询信息
-func (dao *UserDao) FindByPhone(ctx context.Context, phone string) (User, error) {
+func (dao *GORMUserDao) FindByPhone(ctx context.Context, phone string) (User, error) {
 	var u User
 	err := dao.db.WithContext(ctx).Where("phone = ?", phone).First(&u).Error
 	return u, err
 }
 
 // 通过id查询信息
-func (dao *UserDao) FindById(ctx context.Context, id int64) (User, error) {
+func (dao *GORMUserDao) FindById(ctx context.Context, id int64) (User, error) {
 	var u User
 	err := dao.db.WithContext(ctx).Where("id = ?", id).First(&u).Error
 	return u, err
 }
 
 // 插入用户
-func (dao *UserDao) Insert(ctx context.Context, u *User) error {
+func (dao *GORMUserDao) Insert(ctx context.Context, u *User) error {
 	//存毫秒数
 	now := time.Now().UnixMilli()
 	u.Utime = now

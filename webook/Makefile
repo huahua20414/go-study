@@ -3,11 +3,11 @@
 # 要注意文件分隔符使用 Windows 的分隔符。
 .PHONY: docker
 docker:
-	# remove file day01 if exits 
-	@rm day01 || true
+	# remove file webook if exits
+	@rm webook || true
 	# Delete the existing mirrors.
-	@docker rmi -f huahua/day01:v0.0.3
+	@#docker rmi -f huahua/webook:v0.0.4 || true
 	# Create a linux executable file
-	@GOOS="linux" GOARCH="arm" go build -tags=k8s -o day01 .
+	@GOOS="linux" GOARCH="arm" go build -tags=k8s -o webook .
 	# Pull this image through the Dockerfile configuration
-	@docker build --no-cache -t huahua/day01:v0.0.4 .
+	@docker build --no-cache -t huahua/webook:v0.0.1 .

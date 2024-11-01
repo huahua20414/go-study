@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: day01-redis
+  name: webook-redis
   labels:
-    app: day01-redis
+    app: webook-redis
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: day01-redis
+      app: webook-redis
   template:
     metadata:
-      name: day01-redis
+      name: webook-redis
       labels:
-        app: day01-redis
+        app: webook-redis
     spec:
       containers:
-        - name: day01-redis
+        - name: webook-redis
           image: redis:latest
           imagePullPolicy: IfNotPresent
           ports:

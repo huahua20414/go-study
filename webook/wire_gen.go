@@ -28,8 +28,8 @@ func InitWebServer() *gin.Engine {
 	userRepository := repository.NewUserRepository(userDao, userCache, codeCache)
 	emailService := ioc.InitEmailSms()
 	tencentService := ioc.InitTencentSms()
-	userService := service.NewUserService(userRepository, emailService, tencentService)
-	userHandler := web.NewUserHandler(userService)
+	userServiceInterface := service.NewUserService(userRepository, emailService, tencentService)
+	userHandler := web.NewUserHandler(userServiceInterface)
 	engine := ioc.InitGin(v, userHandler)
 	return engine
 }

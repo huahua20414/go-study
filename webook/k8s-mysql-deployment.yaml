@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: day01-mysql
+  name: webook-mysql
   labels:
-    app: day01-mysql
+    app: webook-mysql
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: day01-mysql
+      app: webook-mysql
   template:
     metadata:
-      name: day01-mysql
+      name: webook-mysql
       labels:
-        app: day01-mysql
+        app: webook-mysql
     spec:
       containers:
-        - name: day01-mysql
+        - name: webook-mysql
           image: mysql:8.0.29
           env:
             - name: MYSQL_ROOT_PASSWORD
@@ -36,5 +36,5 @@ spec:
         - name: mysql-storage
           persistentVolumeClaim:
             # 对应pvc文件的name
-            claimName: day01-mysql-claim
+            claimName: webook-mysql-claim
       

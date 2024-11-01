@@ -12,17 +12,24 @@ import (
 const verification = time.Minute * 5
 const maxAttempts = 3 // 最大尝试次数
 
-type CodeCache struct {
+type CodeCache interface {
+	Get(ctx context.Context, u domain.User) (domain.User, error)
+	Set(ctx context.Context, u domain.User) error
+	RemoveCode(ctx context.Context, u domain.User) error
+	key(u domain.User) string
+}
+
+type RedisCodeCache struct {
 	client       redis.Cmdable
 	verification time.Duration
 }
 
-func NewCodeCache(client redis.Cmdable) *CodeCache {
-	return &CodeCache{client: client, verification: verification}
+func NewCodeCache(client redis.Cmdable) CodeCache {
+	return &RedisCodeCache{client: client, verification: verification}
 }
 
 // 获取验证码缓存
-func (cache *CodeCache) Get(ctx context.Context, u domain.User) (domain.User, error) {
+func (cache *RedisCodeCache) Get(ctx context.Context, u domain.User) (domain.User, error) {
 	key := cache.key(u)
 	//查看次数=3直接删除
 	attemptsKey := fmt.Sprintf("%s:attempts", key) // 尝试次数的键
@@ -58,7 +65,7 @@ func (cache *CodeCache) Get(ctx context.Context, u domain.User) (domain.User, er
 	return user, nil
 }
 
-func (cache *CodeCache) Set(ctx context.Context, u domain.User) error {
+func (cache *RedisCodeCache) Set(ctx context.Context, u domain.User) error {
 	//解析user对象
 	val, err := json.Marshal(u)
 	if err != nil {
@@ -77,7 +84,7 @@ func (cache *CodeCache) Set(ctx context.Context, u domain.User) error {
 }
 
 // 删除验证码
-func (cache *CodeCache) RemoveCode(ctx context.Context, u domain.User) error {
+func (cache *RedisCodeCache) RemoveCode(ctx context.Context, u domain.User) error {
 	key := cache.key(u)
 	//删除验证码
 	if err := cache.client.Del(ctx, key).Err(); err != nil && err != redis.Nil {
@@ -91,6 +98,6 @@ func (cache *CodeCache) RemoveCode(ctx context.Context, u domain.User) error {
 	return nil
 }
 
-func (cache *CodeCache) key(u domain.User) string {
+func (cache *RedisCodeCache) key(u domain.User) string {
 	return fmt.Sprintf("user:info:%s:%s", u.CodeType, u.Phone)
 }

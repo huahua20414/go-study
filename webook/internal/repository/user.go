@@ -10,23 +10,33 @@ import (
 
 var ErrUserDulicatePhone = dao.ErrUserDulicatePhone
 
-type UserRepository struct {
-	dao       *dao.UserDao
-	cache     *cache.UserCache
-	codeCache *cache.CodeCache
+type UserRepository interface {
+	Update(ctx context.Context, user domain.User) error
+	FindByPhone(ctx context.Context, phone string) (domain.User, error)
+	Create(ctx context.Context, u domain.User) error
+	RemoveCode(ctx context.Context, u domain.User) error
+	FindById(ctx context.Context, id int64) (domain.User, error)
+	SetVerification(ctx context.Context, user domain.User) error
+	GetVerification(ctx context.Context, u domain.User) (domain.User, error)
 }
 
-func NewUserRepository(dao *dao.UserDao, cache *cache.UserCache, codeCache *cache.CodeCache) *UserRepository {
-	return &UserRepository{dao: dao,
+type CachedUserRepository struct {
+	dao       dao.UserDao
+	cache     cache.UserCache
+	codeCache cache.CodeCache
+}
+
+func NewUserRepository(dao dao.UserDao, cache cache.UserCache, codeCache cache.CodeCache) UserRepository {
+	return &CachedUserRepository{dao: dao,
 		cache: cache, codeCache: codeCache}
 }
 
 // 修改密码
-func (r *UserRepository) Update(ctx context.Context, user domain.User) error {
+func (r *CachedUserRepository) Update(ctx context.Context, user domain.User) error {
 	return r.dao.Updates(ctx, dao.User{Phone: user.Phone, Password: user.Password})
 }
 
-func (r *UserRepository) FindByPhone(ctx context.Context, phone string) (domain.User, error) {
+func (r *CachedUserRepository) FindByPhone(ctx context.Context, phone string) (domain.User, error) {
 	user, err := r.dao.FindByPhone(ctx, phone)
 	if err != nil {
 		return domain.User{}, err
@@ -38,7 +48,7 @@ func (r *UserRepository) FindByPhone(ctx context.Context, phone string) (domain.
 	}, nil
 }
 
-func (r *UserRepository) Create(ctx context.Context, u domain.User) error {
+func (r *CachedUserRepository) Create(ctx context.Context, u domain.User) error {
 	user := dao.User{Phone: u.Phone, Password: u.Password}
 	err := r.dao.Insert(ctx, &user)
 	if err != nil {
@@ -58,14 +68,14 @@ func (r *UserRepository) Create(ctx context.Context, u domain.User) error {
 }
 
 // user里要有codetype和phone的信息
-func (r *UserRepository) RemoveCode(ctx context.Context, u domain.User) error {
+func (r *CachedUserRepository) RemoveCode(ctx context.Context, u domain.User) error {
 	if err := r.codeCache.RemoveCode(ctx, u); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (r *UserRepository) FindById(ctx context.Context, id int64) (domain.User, error) {
+func (r *CachedUserRepository) FindById(ctx context.Context, id int64) (domain.User, error) {
 	u, err := r.cache.Get(ctx, id)
 	if err == nil {
 		//有数据
@@ -90,7 +100,6 @@ func (r *UserRepository) FindById(ctx context.Context, id int64) (domain.User, e
 			//打日志做监控
 		}
 		return user, nil
-
 	}
 	//没数据,考虑redis崩掉，要不要去数据库查，做限流
 	return domain.User{}, err
@@ -98,7 +107,7 @@ func (r *UserRepository) FindById(ctx context.Context, id int64) (domain.User, e
 }
 
 // 设置验证码缓存
-func (r *UserRepository) SetVerification(ctx context.Context, user domain.User) error {
+func (r *CachedUserRepository) SetVerification(ctx context.Context, user domain.User) error {
 	user.Utime = time.Now().Unix()
 	err := r.codeCache.Set(ctx, user)
 	if err != nil {
@@ -108,7 +117,7 @@ func (r *UserRepository) SetVerification(ctx context.Context, user domain.User) 
 }
 
 // 获取验证码缓存
-func (r *UserRepository) GetVerification(ctx context.Context, u domain.User) (domain.User, error) {
+func (r *CachedUserRepository) GetVerification(ctx context.Context, u domain.User) (domain.User, error) {
 	user, err := r.codeCache.Get(ctx, u)
 	if err != nil {
 		return domain.User{}, err
