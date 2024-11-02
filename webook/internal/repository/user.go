@@ -10,6 +10,8 @@ import (
 
 var ErrUserDulicatePhone = dao.ErrUserDulicatePhone
 
+const maxAttempts = 3 // 最大尝试次数
+
 type UserRepository interface {
 	Update(ctx context.Context, user domain.User) error
 	FindByPhone(ctx context.Context, phone string) (domain.User, error)
@@ -63,13 +65,17 @@ func (r *CachedUserRepository) Create(ctx context.Context, u domain.User) error 
 	}
 	//设置用户信息缓存成功,删除验证码
 	u.CodeType = "register"
+	//注册成功删除验证码
 	return r.RemoveCode(ctx, u)
 
 }
 
 // user里要有codetype和phone的信息
 func (r *CachedUserRepository) RemoveCode(ctx context.Context, u domain.User) error {
-	if err := r.codeCache.RemoveCode(ctx, u); err != nil {
+	if err := r.codeCache.RemoveCode(ctx, cache.Code{
+		CodeType: u.CodeType,
+		Phone:    u.Phone,
+	}); err != nil {
 		return err
 	}
 	return nil
@@ -103,13 +109,16 @@ func (r *CachedUserRepository) FindById(ctx context.Context, id int64) (domain.U
 	}
 	//没数据,考虑redis崩掉，要不要去数据库查，做限流
 	return domain.User{}, err
-
 }
 
 // 设置验证码缓存
 func (r *CachedUserRepository) SetVerification(ctx context.Context, user domain.User) error {
-	user.Utime = time.Now().Unix()
-	err := r.codeCache.Set(ctx, user)
+	err := r.codeCache.Set(ctx, cache.Code{
+		CodeType:     user.CodeType,
+		Phone:        user.Phone,
+		Utime:        time.Now().Unix(),
+		Verification: user.Verification,
+	})
 	if err != nil {
 		return err
 	}
@@ -118,9 +127,33 @@ func (r *CachedUserRepository) SetVerification(ctx context.Context, user domain.
 
 // 获取验证码缓存
 func (r *CachedUserRepository) GetVerification(ctx context.Context, u domain.User) (domain.User, error) {
-	user, err := r.codeCache.Get(ctx, u)
+	code := cache.Code{
+		CodeType: u.CodeType,
+		Phone:    u.Phone,
+		Utime:    0,
+	}
+	attempts, err := r.codeCache.GetAttempts(ctx, code)
 	if err != nil {
 		return domain.User{}, err
 	}
-	return user, nil
+	if attempts >= maxAttempts {
+		//删除验证码和尝试次数
+		if err := r.RemoveCode(ctx, u); err != nil {
+			return domain.User{}, err
+		}
+		return domain.User{}, nil
+	}
+	//查看次数加一
+	if err := r.codeCache.SetAttempts(ctx, code, attempts); err != nil {
+		return domain.User{}, err
+	}
+	//获取验证码
+	if code, err := r.codeCache.Get(ctx, code); err != nil {
+		return domain.User{}, err
+	} else {
+		return domain.User{
+			Utime:        code.Utime,
+			Verification: code.Verification,
+		}, nil
+	}
 }

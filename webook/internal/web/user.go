@@ -257,10 +257,7 @@ func (u *UserHandler) SignUp(c *gin.Context) {
 		c.String(500, "系统错误")
 		return
 	}
-	c.JSON(200, gin.H{
-		"code": 200,
-		"msg":  "success",
-	})
+	c.String(200, "success")
 
 }
 

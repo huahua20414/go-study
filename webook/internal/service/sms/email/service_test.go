@@ -25,6 +25,19 @@ func TestSend(t *testing.T) {
 	)
 	gomail1 := NewService(d, m)
 	//要发送给谁
-	gomail1.Send("2041436630@qq.com")
+	testCases := []struct {
+		name  string
+		email string
+	}{{name: "wang", email: "3504974916@qq.com"},
+		{name: "wang", email: "3504974916@qq.com"},
+		{name: "wang", email: "3504974916@qq.com"},
+		{name: "wang", email: "3504974916@qq.com"},
+		{name: "wang", email: "3504974916@qq.com"},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			gomail1.Send(tc.email)
+		})
+	}
 
 }

@@ -6,8 +6,11 @@ docker:
 	# remove file webook if exits
 	@rm webook || true
 	# Delete the existing mirrors.
-	@#docker rmi -f huahua/webook:v0.0.4 || true
+	@docker rmi -f huahua/webook:v0.0.1
 	# Create a linux executable file
 	@GOOS="linux" GOARCH="arm" go build -tags=k8s -o webook .
 	# Pull this image through the Dockerfile configuration
 	@docker build --no-cache -t huahua/webook:v0.0.1 .
+
+
+
